@@ -1,0 +1,19 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ts3Bot", "Ts3Bot.csproj", "{1196DC33-FFCE-4D82-9CAD-C28E23D36B0B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+		Docker|Any CPU = Docker|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1196DC33-FFCE-4D82-9CAD-C28E23D36B0B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1196DC33-FFCE-4D82-9CAD-C28E23D36B0B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1196DC33-FFCE-4D82-9CAD-C28E23D36B0B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1196DC33-FFCE-4D82-9CAD-C28E23D36B0B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1196DC33-FFCE-4D82-9CAD-C28E23D36B0B}.Docker|Any CPU.ActiveCfg = Docker|Any CPU
+		{1196DC33-FFCE-4D82-9CAD-C28E23D36B0B}.Docker|Any CPU.Build.0 = Docker|Any CPU
+	EndGlobalSection
+EndGlobal

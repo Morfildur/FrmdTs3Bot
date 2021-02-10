@@ -1,0 +1,25 @@
+version: "3.0"
+
+services:
+  ts3bot:
+    build: "."
+    environment:
+      TS3_HOST: "ts3"
+      TS3_USER: "serveradmin"
+      TS3_PASS: "dlIxLqHB"
+    volumes:
+      - "./pokedCache:/srv/ts3/pokedCache"
+    depends_on:
+      - ts3
+
+  ts3:
+    image: teamspeak:3.13.3
+    restart: always
+    
+    environment:
+      TS3SERVER_LICENSE: "accept"
+
+    ports:
+      - '127.0.0.1:9987:9987/udp'
+      - '127.0.0.1:30033:30033'
+      - '127.0.0.1:10011:10011'
