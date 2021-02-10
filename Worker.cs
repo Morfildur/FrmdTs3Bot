@@ -33,8 +33,9 @@ namespace Ts3Bot
                 "Vanguard Radio"
             };
 
-            const string pokedCacheFile = "/srv/ts3/pokedCache";
-            if (File.Exists(pokedCacheFile))
+            const string pokedCacheDirectory = "/srv/ts3";
+            const string pokedCacheFile = pokedCacheDirectory + "/pokedCache";
+            if (Directory.Exists(pokedCacheDirectory))
             {
                 pokedClients.AddRange(
                     File.ReadLines(pokedCacheFile)
@@ -93,10 +94,10 @@ namespace Ts3Bot
                         if (clientDetails.ServerGroupIds.Any(gid => frmdGroups.Contains(gid)))
                         {
                             logger.LogInformation("Messaging {Client}", clientDetails.UniqueIdentifier);
-                            await rc.PokeClient(clientInfo, "Please sign up for Outfit Wars (See Discord)");
+                            await rc.PokeClient(clientInfo, "Please sign up for Outfit Wars (See Discord #announcements)");
                             pokedClients.Add(clientDetails.UniqueIdentifier);
 
-                            if (File.Exists(pokedCacheFile))
+                            if (Directory.Exists(pokedCacheDirectory))
                             {
                                 await File.AppendAllLinesAsync(pokedCacheFile, new[] {clientDetails.UniqueIdentifier},
                                     stoppingToken);
