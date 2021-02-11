@@ -118,6 +118,7 @@ namespace Ts3Bot
                             {
                                 using (TeamSpeakClient rc2 = new TeamSpeakClient(ts3Host))
                                 {
+                                    logger.LogInformation("Trying to Connect to {Host}", ts3Host);
                                     await rc2.Connect();
                                     logger.LogInformation("Connected at: {Time}", DateTimeOffset.Now);
 
