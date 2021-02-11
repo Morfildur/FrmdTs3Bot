@@ -6,7 +6,7 @@ services:
     environment:
       TS3_HOST: "ts3"
       TS3_USER: "serveradmin"
-      TS3_PASS: "dlIxLqHB"
+      TS3_PASS: "<get-password-from-ts3-log>"
     volumes:
       - "./pokedCache:/srv/ts3/pokedCache"
     depends_on:
@@ -14,8 +14,7 @@ services:
 
   ts3:
     image: teamspeak:3.13.3
-    restart: always
-    
+
     environment:
       TS3SERVER_LICENSE: "accept"
 
