@@ -51,10 +51,10 @@ namespace Ts3Bot
                              ?? configuration["Ts3:Host"]
                              ?? "localhost";
             string ts3User = Environment.GetEnvironmentVariable("TS3_USER")
-                             ?? configuration["Ts3:Username"] 
+                             ?? configuration["Ts3:Username"]
                              ?? "serveradmin";
-            string ts3Pass = Environment.GetEnvironmentVariable("TS3_PASS") 
-                             ?? configuration["Ts3:Password"] 
+            string ts3Pass = Environment.GetEnvironmentVariable("TS3_PASS")
+                             ?? configuration["Ts3:Password"]
                              ?? "";
 
             logger.LogInformation("Worker started at: {Time}", DateTimeOffset.Now);
@@ -103,43 +103,44 @@ namespace Ts3Bot
                         .Where(c => !checkedClientIds.Contains(c.Id))
                         .ToList();
 
+
                     foreach (GetClientInfo clientInfo in clientInfoList)
                     {
                         logger.LogInformation("Found User: {User} {Id}", clientInfo.NickName, clientInfo.Id);
-                        GetClientDetailedInfo clientDetails = await rc.GetClientInfo(clientInfo);
-                        if (pokedClients.Contains(clientDetails.UniqueIdentifier))
+                        using (TeamSpeakClient rc2 = new TeamSpeakClient(ts3Host))
                         {
-                            logger.LogInformation("Already messaged {User} {Id} {UniqueId}", clientDetails.NickName,
-                                clientInfo.Id, clientDetails.UniqueIdentifier);
-                        }
-                        else
-                        {
-                            if (clientDetails.ServerGroupIds.Any(gid => frmdGroups.Contains(gid)))
+                            logger.LogInformation("Trying to Connect to {Host}", ts3Host);
+                            await rc2.Connect();
+                            logger.LogInformation("Connected at: {Time}", DateTimeOffset.Now);
+
+                            await rc2.Login(ts3User, ts3Pass);
+                            await rc2.UseServer(1);
+                            GetClientDetailedInfo clientDetails = await rc2.GetClientInfo(clientInfo);
+                            if (pokedClients.Contains(clientDetails.UniqueIdentifier))
                             {
-                                using (TeamSpeakClient rc2 = new TeamSpeakClient(ts3Host))
+                                logger.LogInformation("Already messaged {User} {Id} {UniqueId}", clientDetails.NickName,
+                                    clientInfo.Id, clientDetails.UniqueIdentifier);
+                            }
+                            else
+                            {
+                                if (clientDetails.ServerGroupIds.Any(gid => frmdGroups.Contains(gid)))
                                 {
-                                    logger.LogInformation("Trying to Connect to {Host}", ts3Host);
-                                    await rc2.Connect();
-                                    logger.LogInformation("Connected at: {Time}", DateTimeOffset.Now);
-
-                                    await rc2.Login(ts3User, ts3Pass);
-                                    await rc2.UseServer(1);
-
                                     logger.LogInformation("Messaging {Client}", clientDetails.UniqueIdentifier);
                                     await rc2.PokeClient(clientInfo,
                                         "Please sign up for Outfit Wars (See Discord #announcements)");
                                     pokedClients.Add(clientDetails.UniqueIdentifier);
-                                }
 
-                                if (Directory.Exists(pokedCacheDirectory))
-                                {
-                                    await File.AppendAllLinesAsync(pokedCacheFile,
-                                        new[] {clientDetails.UniqueIdentifier},
-                                        stoppingToken);
+
+                                    if (Directory.Exists(pokedCacheDirectory))
+                                    {
+                                        await File.AppendAllLinesAsync(pokedCacheFile,
+                                            new[] {clientDetails.UniqueIdentifier},
+                                            stoppingToken);
+                                    }
                                 }
                             }
                         }
-                        
+
                         checkedClientIds.Add(clientInfo.Id);
                     }
                 }
