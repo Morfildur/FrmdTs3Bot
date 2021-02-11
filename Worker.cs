@@ -127,9 +127,9 @@ namespace Ts3Bot
 
                     checkedClientIds.Add(clientInfo.Id);
                 }
-            }
 
-            await Task.Delay(5000, stoppingToken);
+                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+            }
         }
     }
 }
