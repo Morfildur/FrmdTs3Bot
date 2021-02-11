@@ -129,7 +129,7 @@ namespace Ts3Bot
                                 }
                             }
                         }
-
+                        
                         checkedClientIds.Add(clientInfo.Id);
                     }
                 }
