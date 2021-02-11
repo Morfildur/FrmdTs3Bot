@@ -133,9 +133,11 @@ namespace Ts3Bot
 
                                     if (Directory.Exists(pokedCacheDirectory))
                                     {
-                                        await File.AppendAllLinesAsync(pokedCacheFile,
+                                        await File.AppendAllLinesAsync(
+                                            pokedCacheFile,
                                             new[] {clientDetails.UniqueIdentifier},
-                                            stoppingToken);
+                                            stoppingToken
+                                        );
                                     }
                                 }
                             }
