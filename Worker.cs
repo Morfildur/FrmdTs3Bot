@@ -116,10 +116,19 @@ namespace Ts3Bot
                         {
                             if (clientDetails.ServerGroupIds.Any(gid => frmdGroups.Contains(gid)))
                             {
-                                logger.LogInformation("Messaging {Client}", clientDetails.UniqueIdentifier);
-                                await rc.PokeClient(clientInfo,
-                                    "Please sign up for Outfit Wars (See Discord #announcements)");
-                                pokedClients.Add(clientDetails.UniqueIdentifier);
+                                using (TeamSpeakClient rc2 = new TeamSpeakClient(ts3Host))
+                                {
+                                    await rc2.Connect();
+                                    logger.LogInformation("Connected at: {Time}", DateTimeOffset.Now);
+
+                                    await rc2.Login(ts3User, ts3Pass);
+                                    await rc2.UseServer(1);
+
+                                    logger.LogInformation("Messaging {Client}", clientDetails.UniqueIdentifier);
+                                    await rc2.PokeClient(clientInfo,
+                                        "Please sign up for Outfit Wars (See Discord #announcements)");
+                                    pokedClients.Add(clientDetails.UniqueIdentifier);
+                                }
 
                                 if (Directory.Exists(pokedCacheDirectory))
                                 {
