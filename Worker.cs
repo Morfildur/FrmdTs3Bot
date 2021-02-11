@@ -103,45 +103,37 @@ namespace Ts3Bot
                         .Where(c => !checkedClientIds.Contains(c.Id))
                         .ToList();
 
-
                     foreach (GetClientInfo clientInfo in clientInfoList)
                     {
+                        Thread.Sleep(TimeSpan.FromSeconds(1));
                         logger.LogInformation("Found User: {User} {Id}", clientInfo.NickName, clientInfo.Id);
-                        using (TeamSpeakClient rc2 = new TeamSpeakClient(ts3Host))
+                        GetClientDetailedInfo clientDetails = await rc.GetClientInfo(clientInfo);
+                        if (pokedClients.Contains(clientDetails.UniqueIdentifier))
                         {
-                            logger.LogInformation("Trying to Connect to {Host}", ts3Host);
-                            await rc2.Connect();
-                            logger.LogInformation("Connected at: {Time}", DateTimeOffset.Now);
+                            logger.LogInformation("Already messaged {User} {Id} {UniqueId}", clientDetails.NickName,
+                                clientInfo.Id, clientDetails.UniqueIdentifier);
+                        }
+                        else
+                        {
+                            if (clientDetails.ServerGroupIds.Any(gid => frmdGroups.Contains(gid)))
+                            {
+                                logger.LogInformation("Messaging {Client}", clientDetails.UniqueIdentifier);
+                                await rc.PokeClient(clientInfo,
+                                    "Please sign up for Outfit Wars (See Discord #announcements)");
+                                pokedClients.Add(clientDetails.UniqueIdentifier);
 
-                            await rc2.Login(ts3User, ts3Pass);
-                            await rc2.UseServer(1);
-                            GetClientDetailedInfo clientDetails = await rc2.GetClientInfo(clientInfo);
-                            if (pokedClients.Contains(clientDetails.UniqueIdentifier))
-                            {
-                                logger.LogInformation("Already messaged {User} {Id} {UniqueId}", clientDetails.NickName,
-                                    clientInfo.Id, clientDetails.UniqueIdentifier);
-                            }
-                            else
-                            {
-                                if (clientDetails.ServerGroupIds.Any(gid => frmdGroups.Contains(gid)))
+
+                                if (Directory.Exists(pokedCacheDirectory))
                                 {
-                                    logger.LogInformation("Messaging {Client}", clientDetails.UniqueIdentifier);
-                                    await rc2.PokeClient(clientInfo,
-                                        "Please sign up for Outfit Wars (See Discord #announcements)");
-                                    pokedClients.Add(clientDetails.UniqueIdentifier);
-
-
-                                    if (Directory.Exists(pokedCacheDirectory))
-                                    {
-                                        await File.AppendAllLinesAsync(
-                                            pokedCacheFile,
-                                            new[] {clientDetails.UniqueIdentifier},
-                                            stoppingToken
-                                        );
-                                    }
+                                    await File.AppendAllLinesAsync(
+                                        pokedCacheFile,
+                                        new[] {clientDetails.UniqueIdentifier},
+                                        stoppingToken
+                                    );
                                 }
                             }
                         }
+
 
                         checkedClientIds.Add(clientInfo.Id);
                     }
