@@ -7,8 +7,10 @@ services:
       TS3_HOST: "ts3"
       TS3_USER: "serveradmin"
       TS3_PASS: "<get-password-from-ts3-log>"
+      
+# Delete docker volume to clear cache
     volumes:
-      - "./pokedCache:/srv/ts3/pokedCache"
+      - "pokeCache:/srv/ts3/"
     depends_on:
       - ts3
 
@@ -22,3 +24,6 @@ services:
       - '127.0.0.1:9987:9987/udp'
       - '127.0.0.1:30033:30033'
       - '127.0.0.1:10011:10011'
+
+volumes:
+  pokeCache:
