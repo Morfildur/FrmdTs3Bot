@@ -56,31 +56,39 @@ namespace Ts3Bot
             string ts3Pass = Environment.GetEnvironmentVariable("TS3_PASS")
                              ?? configuration["Ts3:Password"]
                              ?? "";
+            string message = Environment.GetEnvironmentVariable("TS3_MESSAGE")
+                             ?? configuration["Message"]
+                             ?? "Outfit Wars on Saturday 27th, 19:30 UTC/20:30 CET (See Discord #announcements)";
 
-            logger.LogInformation("Worker started at: {Time}", DateTimeOffset.Now);
+            if (message?.Length <= 0)
+            {
+                logger.LogCritical("{Time} No message configured", DateTime.Now);
+            }
+            
+            logger.LogInformation("{Time} Worker started", DateTimeOffset.Now);
 
             List<int> frmdGroups = new List<int>();
 
-            logger.LogInformation("Trying to Connect to {Host}", ts3Host);
+            logger.LogInformation("{Time} Trying to Connect to {Host}", DateTimeOffset.Now, ts3Host);
             using TeamSpeakClient rc = new TeamSpeakClient(ts3Host);
             await rc.Connect();
-            logger.LogInformation("Connected at: {Time}", DateTimeOffset.Now);
+            logger.LogInformation("{Time} Connected", DateTimeOffset.Now);
 
             await rc.Login(ts3User, ts3Pass);
             await rc.UseServer(1);
 
-            logger.LogInformation("Logged in at: {Time}", DateTimeOffset.Now);
+            logger.LogInformation("{Time} Logged in", DateTimeOffset.Now);
 
             IReadOnlyList<GetServerGroupListInfo> serverGroups = await rc.GetServerGroups();
             frmdGroups.AddRange(serverGroups
                 .Where(g => g.Name == "FRMD")
                 .Select(g => g.Id));
 
-            frmdGroups.ForEach(g => logger.LogInformation("Found FRMD Group with Id {FrmdGroupId}", g));
+            frmdGroups.ForEach(g => logger.LogInformation("{Time} Found FRMD Group with Id {FrmdGroupId}", DateTimeOffset.Now, g));
 
             if (frmdGroups.Count == 0)
             {
-                logger.LogCritical("No FRMD Group found");
+                logger.LogCritical("{Time} No FRMD Group found", DateTimeOffset.Now);
             }
 
             while (!stoppingToken.IsCancellationRequested)
@@ -96,20 +104,19 @@ namespace Ts3Bot
                 foreach (GetClientInfo clientInfo in clientInfoList)
                 {
                     Thread.Sleep(TimeSpan.FromSeconds(1));
-                    logger.LogInformation("Found User: {User} {Id}", clientInfo.NickName, clientInfo.Id);
+                    logger.LogInformation("{Time} Found User: {User} {Id}", DateTimeOffset.Now, clientInfo.NickName, clientInfo.Id);
                     GetClientDetailedInfo clientDetails = await rc.GetClientInfo(clientInfo);
                     if (pokedClients.Contains(clientDetails.UniqueIdentifier))
                     {
-                        logger.LogInformation("Already messaged {User} {Id} {UniqueId}", clientDetails.NickName,
+                        logger.LogInformation("{Time} Already messaged {User} {Id} {UniqueId}", DateTimeOffset.Now, clientDetails.NickName,
                             clientInfo.Id, clientDetails.UniqueIdentifier);
                     }
                     else
                     {
                         if (clientDetails.ServerGroupIds.Any(gid => frmdGroups.Contains(gid)))
                         {
-                            logger.LogInformation("Messaging {Client}", clientDetails.UniqueIdentifier);
-                            await rc.PokeClient(clientInfo,
-                                "Please sign up for Outfit Wars (See Discord #announcements)");
+                            logger.LogInformation("{Time} Messaging {Client}", DateTimeOffset.Now, clientDetails.UniqueIdentifier);
+                            await rc.PokeClient(clientInfo, message);
                             pokedClients.Add(clientDetails.UniqueIdentifier);
 
 
