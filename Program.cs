@@ -11,10 +11,6 @@ namespace Ts3Bot
     {
         public static void Main(string[] args)
         {
-            Console.WriteLine(Environment.GetEnvironmentVariable("TS3_HOST"));
-            Console.WriteLine(Environment.GetEnvironmentVariable("TS3_USER"));
-            Console.WriteLine(Environment.GetEnvironmentVariable("TS3_PASS"));
-            
             CreateHostBuilder(args).Build().Run();
         }
 
