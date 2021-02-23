@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using TeamSpeak3QueryApi.Net.Specialized;
+using TeamSpeak3QueryApi.Net.Specialized.Notifications;
 using TeamSpeak3QueryApi.Net.Specialized.Responses;
 
 namespace Ts3Bot
@@ -17,16 +19,17 @@ namespace Ts3Bot
     {
         private readonly ILogger<Worker> logger;
         private readonly IConfiguration configuration;
+        private readonly IHostApplicationLifetime hostApplicationLifetime;
 
-        public Worker(ILogger<Worker> logger, IConfiguration configuration)
+        public Worker(ILogger<Worker> logger, IConfiguration configuration, IHostApplicationLifetime hostApplicationLifetime)
         {
             this.logger = logger;
             this.configuration = configuration;
+            this.hostApplicationLifetime = hostApplicationLifetime;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            List<int> checkedClientIds = new List<int>();
             List<string> pokedClients = new List<string>();
             List<string> nameBlacklist = new List<string>
             {
@@ -62,9 +65,11 @@ namespace Ts3Bot
 
             if (message?.Length <= 0)
             {
+                // Critical error. Kill application
                 logger.LogCritical("{Time} No message configured", DateTime.Now);
+                hostApplicationLifetime.StopApplication();
             }
-            
+
             logger.LogInformation("{Time} Worker started", DateTimeOffset.Now);
 
             List<int> frmdGroups = new List<int>();
@@ -75,67 +80,65 @@ namespace Ts3Bot
             logger.LogInformation("{Time} Connected", DateTimeOffset.Now);
 
             await rc.Login(ts3User, ts3Pass);
-            await rc.UseServer(1);
-
             logger.LogInformation("{Time} Logged in", DateTimeOffset.Now);
+            
+            await rc.UseServer(1);
 
             IReadOnlyList<GetServerGroupListInfo> serverGroups = await rc.GetServerGroups();
             frmdGroups.AddRange(serverGroups
                 .Where(g => g.Name == "FRMD")
                 .Select(g => g.Id));
 
-            frmdGroups.ForEach(g => logger.LogInformation("{Time} Found FRMD Group with Id {FrmdGroupId}", DateTimeOffset.Now, g));
+            frmdGroups.ForEach(g =>
+                logger.LogInformation("{Time} Found FRMD Group with Id {FrmdGroupId}", DateTimeOffset.Now, g));
 
             if (frmdGroups.Count == 0)
             {
+                // Critical error. Kill application
                 logger.LogCritical("{Time} No FRMD Group found", DateTimeOffset.Now);
+                hostApplicationLifetime.StopApplication();
             }
+
+            ConcurrentQueue<ClientEnterView> toPoke = new ConcurrentQueue<ClientEnterView>();
+
+            await rc.RegisterServerNotification();
+            rc.Subscribe<ClientEnterView>(data =>
+            {
+                foreach (ClientEnterView d in data)
+                {
+                    bool isFrmdGroup = d.ServerGroups.Split(",")
+                        .Any(s => frmdGroups.Contains(int.Parse(s)));
+
+                    logger.LogInformation("{Time} {Name} {Uid} {IsFrmd}", DateTime.Now, d.NickName, d.Uid, isFrmdGroup);
+
+                    if (isFrmdGroup && !pokedClients.Contains(d.Uid) && !nameBlacklist.Contains(d.NickName))
+                    {
+                        toPoke.Enqueue(d);
+                    }
+                }
+            });
+
+            DateTime lastKeepAlive = DateTime.Now;
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                IReadOnlyList<GetClientInfo> rawClientInfoList = await rc.GetClients();
-
-                List<GetClientInfo> clientInfoList = rawClientInfoList
-                    .Where(c => c.Type == ClientType.FullClient)
-                    .Where(c => !nameBlacklist.Contains(c.NickName))
-                    .Where(c => !checkedClientIds.Contains(c.Id))
-                    .ToList();
-
-                foreach (GetClientInfo clientInfo in clientInfoList)
+                if (lastKeepAlive.AddSeconds(30) < DateTime.Now)
                 {
-                    Thread.Sleep(TimeSpan.FromSeconds(1));
-                    logger.LogInformation("{Time} Found User: {User} {Id}", DateTimeOffset.Now, clientInfo.NickName, clientInfo.Id);
-                    GetClientDetailedInfo clientDetails = await rc.GetClientInfo(clientInfo);
-                    if (pokedClients.Contains(clientDetails.UniqueIdentifier))
-                    {
-                        logger.LogInformation("{Time} Already messaged {User} {Id} {UniqueId}", DateTimeOffset.Now, clientDetails.NickName,
-                            clientInfo.Id, clientDetails.UniqueIdentifier);
-                    }
-                    else
-                    {
-                        if (clientDetails.ServerGroupIds.Any(gid => frmdGroups.Contains(gid)))
-                        {
-                            logger.LogInformation("{Time} Messaging {Client}", DateTimeOffset.Now, clientDetails.UniqueIdentifier);
-                            await rc.PokeClient(clientInfo, message);
-                            pokedClients.Add(clientDetails.UniqueIdentifier);
-
-
-                            if (Directory.Exists(pokedCacheDirectory))
-                            {
-                                await File.AppendAllLinesAsync(
-                                    pokedCacheFile,
-                                    new[] {clientDetails.UniqueIdentifier},
-                                    stoppingToken
-                                );
-                            }
-                        }
-                    }
-
-
-                    checkedClientIds.Add(clientInfo.Id);
+                    // Keepalive
+                    await rc.WhoAmI();
+                    lastKeepAlive = DateTime.Now;
                 }
 
-                await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                while (toPoke.TryDequeue(out ClientEnterView current))
+                {
+                    logger.LogInformation("{Time} Messaging {Client}", DateTimeOffset.Now, current.Uid);
+
+                    await rc.PokeClient(current.Id, message);
+
+                    pokedClients.Add(current.Uid);
+                }
+                
+                await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
             }
         }
     }
