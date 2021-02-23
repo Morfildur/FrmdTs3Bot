@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -21,7 +20,11 @@ namespace Ts3Bot
         private readonly IConfiguration configuration;
         private readonly IHostApplicationLifetime hostApplicationLifetime;
 
-        public Worker(ILogger<Worker> logger, IConfiguration configuration, IHostApplicationLifetime hostApplicationLifetime)
+        public Worker(
+            ILogger<Worker> logger,
+            IConfiguration configuration,
+            IHostApplicationLifetime hostApplicationLifetime
+        )
         {
             this.logger = logger;
             this.configuration = configuration;
@@ -81,7 +84,7 @@ namespace Ts3Bot
 
             await rc.Login(ts3User, ts3Pass);
             logger.LogInformation("{Time} Logged in", DateTimeOffset.Now);
-            
+
             await rc.UseServer(1);
 
             IReadOnlyList<GetServerGroupListInfo> serverGroups = await rc.GetServerGroups();
@@ -137,7 +140,7 @@ namespace Ts3Bot
 
                     pokedClients.Add(current.Uid);
                 }
-                
+
                 await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
             }
         }
